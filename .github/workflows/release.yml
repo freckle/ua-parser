@@ -14,8 +14,16 @@ jobs:
         with:
           persist-credentials: false
           submodules: true
+          fetch-depth: 0
 
       - run: sudo apt-get install --assume-yes --no-install-recommends libpcre3-dev
+
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
 
       - id: token
         uses: actions/create-github-app-token@v3
@@ -23,12 +31,7 @@ jobs:
           app-id: ${{ vars.FRECKLE_AUTOMATION_APP_ID }}
           private-key: ${{ secrets.FRECKLE_AUTOMATION_PRIVATE_KEY }}
 
-      - id: release
-        uses: cycjimmy/semantic-release-action@v6
-        with:
-          extra_plugins: |
-            conventional-changelog-conventionalcommits
-            semantic-release-stack-upload
+      - run: pnpm exec semantic-release
         env:
           FORCE_COLOR: 1
           GITHUB_TOKEN: ${{ steps.token.outputs.token }}
