@@ -1,0 +1,132 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.39.1.
+--
+-- see: https://github.com/sol/hpack
+
+name:           freckle-ua-parser
+version:        0.0.0.0
+synopsis:       Parsers for User-Agent strings
+description:    Parses User-Agent strings into browser, operating system, and device details,
+                using the regexes from <https://github.com/ua-parser/uap-core uap-core>.
+category:       Web
+homepage:       https://github.com/freckle/ua-parser#readme
+bug-reports:    https://github.com/freckle/ua-parser/issues
+author:         Ozgun Ataman
+maintainer:     Freckle Education
+copyright:      2012 Ozgun Ataman, 2026 Renaissance Learning Inc
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+tested-with:
+    GHC == 8.6.5
+  , GHC == 8.8.4
+extra-source-files:
+    README.md
+    changelog.md
+    package.yaml
+    src/Web/UAParser/SuiteUtils.hs
+data-files:
+    deps/uap-core/regexes.yaml
+    deps/uap-core/test_resources/additional_os_tests.yaml
+    deps/uap-core/test_resources/firefox_user_agent_strings.yaml
+    deps/uap-core/test_resources/opera_mini_user_agent_strings.yaml
+    deps/uap-core/test_resources/pgts_browser_list-orig.yaml
+    deps/uap-core/test_resources/pgts_browser_list.yaml
+    deps/uap-core/test_resources/podcasting_user_agent_strings.yaml
+    deps/uap-core/tests/test_device.yaml
+    deps/uap-core/tests/test_os.yaml
+    deps/uap-core/tests/test_ua.yaml
+
+source-repository head
+  type: git
+  location: https://github.com/freckle/ua-parser
+
+flag lib-Werror
+  description: Build with -Werror
+  manual: True
+  default: False
+
+library
+  exposed-modules:
+      Web.UAParser
+  hs-source-dirs:
+      src
+  ghc-options: -Wall
+  build-depends:
+      aeson >=0.7
+    , base <5
+    , bytestring
+    , cereal
+    , cereal-text
+    , data-default
+    , deepseq
+    , file-embed <0.1
+    , pcre-light
+    , text
+    , yaml >=0.8.3
+  default-language: Haskell2010
+  if flag(lib-Werror)
+    ghc-options: -Werror
+
+test-suite test
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      Web.UAParser
+      Web.UAParser.SuiteUtils
+      Paths_freckle_ua_parser
+  hs-source-dirs:
+      src
+      test
+  ghc-options: -Wall -O2 -fwarn-tabs
+  build-depends:
+      HUnit
+    , aeson >=0.7
+    , base <5
+    , bytestring
+    , cereal
+    , cereal-text
+    , data-default
+    , deepseq
+    , file-embed <0.1
+    , filepath
+    , pcre-light
+    , tasty
+    , tasty-hunit
+    , tasty-quickcheck
+    , text
+    , yaml >=0.8.3
+  default-language: Haskell2010
+  if flag(lib-Werror)
+    ghc-options: -Werror
+
+benchmark bench
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      Web.UAParser
+      Web.UAParser.SuiteUtils
+      Paths_freckle_ua_parser
+  hs-source-dirs:
+      bench
+      src
+  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      aeson >=0.7
+    , base <5
+    , bytestring
+    , cereal
+    , cereal-text
+    , criterion
+    , data-default
+    , deepseq
+    , file-embed <0.1
+    , filepath
+    , freckle-ua-parser
+    , pcre-light
+    , text
+    , yaml >=0.8.3
+  default-language: Haskell2010
+  if flag(lib-Werror)
+    ghc-options: -Werror

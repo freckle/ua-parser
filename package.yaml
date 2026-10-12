@@ -1,0 +1,83 @@
+name: freckle-ua-parser
+version: 0.0.0.0
+synopsis: Parsers for User-Agent strings
+description: |
+  Parses User-Agent strings into browser, operating system, and device details,
+  using the regexes from <https://github.com/ua-parser/uap-core uap-core>.
+category: Web
+author: Ozgun Ataman
+maintainer: Freckle Education
+copyright: 2012 Ozgun Ataman, 2026 Renaissance Learning Inc
+license: BSD3
+github: freckle/ua-parser
+
+tested-with:
+  - GHC == 8.6.5
+  - GHC == 8.8.4
+
+extra-source-files:
+  - README.md
+  - changelog.md
+  - package.yaml
+  - src/Web/UAParser/SuiteUtils.hs
+
+data-files:
+  - deps/uap-core/*.yaml
+  - deps/uap-core/test_resources/*.yaml
+  - deps/uap-core/tests/*.yaml
+
+flags:
+  lib-Werror:
+    description: Build with -Werror
+    manual: true
+    default: false
+
+ghc-options: -Wall
+
+when:
+  - condition: flag(lib-Werror)
+    ghc-options: -Werror
+
+dependencies:
+  - base < 5
+  - aeson >= 0.7
+  - bytestring
+  - cereal
+  - cereal-text
+  - data-default
+  - deepseq
+  - file-embed < 0.1
+  - pcre-light
+  - text
+  - yaml >= 0.8.3
+
+library:
+  source-dirs: src
+  exposed-modules: Web.UAParser
+  other-modules: []
+
+tests:
+  test:
+    main: Main.hs
+    source-dirs:
+      - src
+      - test
+    ghc-options: -O2 -fwarn-tabs
+    dependencies:
+      - HUnit
+      - filepath
+      - tasty
+      - tasty-hunit
+      - tasty-quickcheck
+
+benchmarks:
+  bench:
+    main: Main.hs
+    source-dirs:
+      - bench
+      - src
+    ghc-options: -threaded -rtsopts -with-rtsopts=-N
+    dependencies:
+      - criterion
+      - filepath
+      - freckle-ua-parser
