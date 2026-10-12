@@ -13,6 +13,7 @@ import           Control.Monad       (join)
 import           Data.Aeson          hiding ((.:?))
 import qualified Data.Aeson          as A
 import           Data.ByteString     (ByteString)
+import           Data.String         (fromString)
 import           Data.Text           (Text)
 import qualified Data.Text.Encoding  as T
 import           Data.Yaml           hiding ((.:?))
@@ -97,5 +98,5 @@ instance FromJSON DevTestCase where
 -------------------------------------------------------------------------------
 -- | Backport a more lenient version of .:? from newer versions of
 -- aeson. It accepts an explicit null as well as an omitted field.
-(.:?) :: (FromJSON a) => Object -> Text -> Parser (Maybe a)
-o .:? k = join <$> (o A..:? k)
+(.:?) :: (FromJSON a) => Object -> String -> Parser (Maybe a)
+o .:? k = join <$> (o A..:? fromString k)

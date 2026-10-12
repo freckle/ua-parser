@@ -1,0 +1,4 @@
+resolver: lts-23.28
+flags:
+  freckle-ua-parser:
+    lib-Werror: true
