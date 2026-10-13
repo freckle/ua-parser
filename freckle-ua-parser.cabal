@@ -39,11 +39,6 @@ source-repository head
   type: git
   location: https://github.com/freckle/ua-parser
 
-flag lib-Werror
-  description: Build with -Werror
-  manual: True
-  default: False
-
 library
   exposed-modules:
       Web.UAParser
@@ -70,8 +65,6 @@ library
     , text
     , yaml >=0.8.3
   default-language: GHC2021
-  if flag(lib-Werror)
-    ghc-options: -Werror
 
 test-suite test
   type: exitcode-stdio-1.0
@@ -109,8 +102,6 @@ test-suite test
     , text
     , yaml >=0.8.3
   default-language: GHC2021
-  if flag(lib-Werror)
-    ghc-options: -Werror
 
 benchmark bench
   type: exitcode-stdio-1.0
@@ -146,5 +137,3 @@ benchmark bench
     , text
     , yaml >=0.8.3
   default-language: GHC2021
-  if flag(lib-Werror)
-    ghc-options: -Werror
