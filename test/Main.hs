@@ -105,64 +105,76 @@ testDevParser DTC {dtcString, dtcFamily, dtcBrand, dtcModel} = testCase tn $ do
   m x = maybe "-" id x
 
 -- Input that is not ASCII, or not UTF-8 at all, is outside what the shared
--- uap-core test cases (deps/uap-core) cover.
+-- uap-core test cases (deps/uap-core) cover. The subject is decoded as UTF-8
+-- before matching, leniently, so invalid bytes become U+FFFD.
 encodingTests :: TestTree
 encodingTests =
   testGroup
     "Encoding"
-    [ testCase "invalid UTF-8 in a captured family falls through to a later parser"
+    [ testCase "invalid UTF-8 in a captured family is replaced and still matches"
         $ parseUA "77 WABC\xff/11 CFNetwork/758.3.15 Darwin/15.4.0"
           @?= Just
             UAResult
-              { uarFamily = "CFNetwork"
-              , uarV1 = Just "758"
-              , uarV2 = Just "3"
-              , uarV3 = Just "15"
+              { uarFamily = "77 WABC\xfffd"
+              , uarV1 = Just "11"
+              , uarV2 = Nothing
+              , uarV3 = Nothing
               }
-    , testCase
-        "invalid UTF-8 in a captured device falls through to the generic parser"
+    , testCase "invalid UTF-8 in a captured device is replaced and still matches"
         $ parseDev "Amazon.com/2.8.0 (Android/2.3.5/HTC\xe9 Desire HD A9191)"
           @?= Just
             DevResult
-              { drFamily = "Generic Smartphone"
-              , drBrand = Just "Generic"
-              , drModel = Just "Smartphone"
+              { drFamily = "HTC \xfffd Desire HD A9191"
+              , drBrand = Just "HTC"
+              , drModel = Just "\xfffd Desire HD A9191"
               }
-    , testCase "invalid UTF-8 can prevent an OS match"
+    , testCase "invalid UTF-8 does not prevent an OS match"
         $ parseOS "App/1.0.0 CFNetwork/897.\xc3\&5 Darwin/17.5.0"
-          @?= Nothing
-    , testCase "invalid UTF-8 can change which OS version is captured"
+          @?= Just
+            OSResult
+              { osrFamily = "iOS"
+              , osrV1 = Just "11"
+              , osrV2 = Just "3"
+              , osrV3 = Nothing
+              , osrV4 = Nothing
+              }
+    , testCase "invalid UTF-8 does not change which OS version is captured"
         $ parseOS
           "Box \xc3Sync/4.0.7848;Windows/10;Intel64 Family 6 Model 158 Stepping 9, GenuineIntel/64bit"
           @?= Just
             OSResult
               { osrFamily = "Windows"
-              , osrV1 = Nothing
+              , osrV1 = Just "10"
               , osrV2 = Nothing
               , osrV3 = Nothing
               , osrV4 = Nothing
               }
-    , testCase "a multibyte character ending a family name prevents a UA match"
+    , testCase "a multibyte character ending a family name is part of the match"
         $ parseUA "FollowSit\xc3\xa9 Bot ( http://www.followsite.com/bot.html )"
-          @?= Nothing
-    , testCase "a multibyte character is matched as separate bytes"
-        $ parseUA "8bo Crawle\xe6\x97\xa5 Bot"
           @?= Just
             UAResult
-              { uarFamily = "bo Crawle"
+              { uarFamily = "FollowSit\xe9 Bot"
               , uarV1 = Nothing
               , uarV2 = Nothing
               , uarV3 = Nothing
               }
-    , testCase
-        "a multibyte character inside a device name falls through to the generic parser"
+    , testCase "a multibyte character is matched as one character"
+        $ parseUA "8bo Crawle\xe6\x97\xa5 Bot"
+          @?= Just
+            UAResult
+              { uarFamily = "bo Crawle\x65e5 Bot"
+              , uarV1 = Nothing
+              , uarV2 = Nothing
+              , uarV3 = Nothing
+              }
+    , testCase "a multibyte character inside a device name is part of the match"
         $ parseDev
           "Android 4.0.4;AppleWebKit/534.30;Build/IMM76D;T-\xf0\x9f\x98\x80\&70 Build/IMM76D"
           @?= Just
             DevResult
-              { drFamily = "Generic Smartphone"
-              , drBrand = Just "Generic"
-              , drModel = Just "Smartphone"
+              { drFamily = "T-\x1f600\&70"
+              , drBrand = Just "Audiosonic"
+              , drModel = Just "T-\x1f600\&70"
               }
     , testCase "trailing invalid UTF-8 after a complete match is ignored"
         $ parseUA
