@@ -37,6 +37,7 @@ main = do
       [ uaTests uaCases
       , osTests osCases
       , devTests devCases
+      , encodingTests
       ]
 
 uaTests :: [UserAgentTestCase] -> TestTree
@@ -102,3 +103,75 @@ testDevParser DTC {dtcString, dtcFamily, dtcBrand, dtcModel} = testCase tn $ do
       , m dtcModel
       ]
   m x = maybe "-" id x
+
+-- Input that is not ASCII, or not UTF-8 at all, is outside what the shared
+-- uap-core test cases (deps/uap-core) cover.
+encodingTests :: TestTree
+encodingTests =
+  testGroup
+    "Encoding"
+    [ testCase "invalid UTF-8 in a captured family falls through to a later parser"
+        $ parseUA "77 WABC\xff/11 CFNetwork/758.3.15 Darwin/15.4.0"
+          @?= Just
+            UAResult
+              { uarFamily = "CFNetwork"
+              , uarV1 = Just "758"
+              , uarV2 = Just "3"
+              , uarV3 = Just "15"
+              }
+    , testCase
+        "invalid UTF-8 in a captured device falls through to the generic parser"
+        $ parseDev "Amazon.com/2.8.0 (Android/2.3.5/HTC\xe9 Desire HD A9191)"
+          @?= Just
+            DevResult
+              { drFamily = "Generic Smartphone"
+              , drBrand = Just "Generic"
+              , drModel = Just "Smartphone"
+              }
+    , testCase "invalid UTF-8 can prevent an OS match"
+        $ parseOS "App/1.0.0 CFNetwork/897.\xc3\&5 Darwin/17.5.0"
+          @?= Nothing
+    , testCase "invalid UTF-8 can change which OS version is captured"
+        $ parseOS
+          "Box \xc3Sync/4.0.7848;Windows/10;Intel64 Family 6 Model 158 Stepping 9, GenuineIntel/64bit"
+          @?= Just
+            OSResult
+              { osrFamily = "Windows"
+              , osrV1 = Nothing
+              , osrV2 = Nothing
+              , osrV3 = Nothing
+              , osrV4 = Nothing
+              }
+    , testCase "a multibyte character ending a family name prevents a UA match"
+        $ parseUA "FollowSit\xc3\xa9 Bot ( http://www.followsite.com/bot.html )"
+          @?= Nothing
+    , testCase "a multibyte character is matched as separate bytes"
+        $ parseUA "8bo Crawle\xe6\x97\xa5 Bot"
+          @?= Just
+            UAResult
+              { uarFamily = "bo Crawle"
+              , uarV1 = Nothing
+              , uarV2 = Nothing
+              , uarV3 = Nothing
+              }
+    , testCase
+        "a multibyte character inside a device name falls through to the generic parser"
+        $ parseDev
+          "Android 4.0.4;AppleWebKit/534.30;Build/IMM76D;T-\xf0\x9f\x98\x80\&70 Build/IMM76D"
+          @?= Just
+            DevResult
+              { drFamily = "Generic Smartphone"
+              , drBrand = Just "Generic"
+              , drModel = Just "Smartphone"
+              }
+    , testCase "trailing invalid UTF-8 after a complete match is ignored"
+        $ parseUA
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 \xff"
+          @?= Just
+            UAResult
+              { uarFamily = "Chrome"
+              , uarV1 = Just "91"
+              , uarV2 = Just "0"
+              , uarV3 = Just "4472"
+              }
+    ]
