@@ -27,6 +27,8 @@ import Data.ByteString.Char8 (ByteString)
 import Data.Data
 import Data.Default
 import Data.FileEmbed
+import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty qualified as NE
 import Data.Maybe
 import Data.Monoid as M
 import Data.Serialize
@@ -34,9 +36,10 @@ import Data.Serialize.Text ()
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
+import Data.Text.Encoding.Error (lenientDecode)
 import Data.Yaml
 import GHC.Generics
-import Text.Regex.PCRE.Light
+import Text.Regex.Pcre2 (Option (Caseless), capturesOpt)
 
 -- UA Parser
 uaConfig :: UAConfig
@@ -56,11 +59,10 @@ parseUA :: ByteString -> Maybe UAResult
 parseUA bs = msum $ map go uaParsers
  where
   UAConfig {uaParsers} = uaConfig
+  subject = decodeSubject bs
 
-  go UAParser {uaRegex, uaFamRep, uaV1Rep, uaV2Rep, uaV3Rep} =
-    either (const Nothing) (fmap normalize . mkRes)
-      . mapM T.decodeUtf8'
-      =<< match uaRegex bs []
+  go UAParser {uaMatch, uaFamRep, uaV1Rep, uaV2Rep, uaV3Rep} =
+    normalize . mkRes . NE.toList <$> uaMatch subject
    where
     normalize (UAResult f v1 v2 v3) =
       UAResult
@@ -70,46 +72,17 @@ parseUA bs = msum $ map go uaParsers
         (normalizeMaybeText v3)
     normalizeMaybeText (Just "") = Nothing
     normalizeMaybeText x = x
-    mkRes caps@(_ : f : v1 : v2 : v3 : _) =
-      Just
-        $ UAResult
-          (repF caps f)
-          (repV1 caps (Just v1))
-          (repV2 caps (Just v2))
-          (repV3 caps (Just v3))
-    mkRes caps@[_, f, v1, v2] =
-      Just
-        $ UAResult
-          (repF caps f)
-          (repV1 caps (Just v1))
-          (repV2 caps (Just v2))
-          (repV3 caps Nothing)
-    mkRes caps@[_, f, v1] =
-      Just
-        $ UAResult
-          (repF caps f)
-          (repV1 caps (Just v1))
-          (repV2 caps Nothing)
-          (repV3 caps Nothing)
-    mkRes caps@[_, f] =
-      Just
-        $ UAResult
-          (repF caps f)
-          (repV1 caps Nothing)
-          (repV2 caps Nothing)
-          (repV3 caps Nothing)
-    mkRes caps@[f] =
-      Just
-        $ UAResult
-          (repF caps f)
-          (repV1 caps Nothing)
-          (repV2 caps Nothing)
-          (repV3 caps Nothing)
-    mkRes _ = Nothing
 
-    repV1 caps x = maybe (x <|> caps `at` 2) Just (makeReplacements caps <$> uaV1Rep)
-    repV2 caps x = maybe (x <|> caps `at` 3) Just (makeReplacements caps <$> uaV2Rep)
-    repV3 caps x = maybe (x <|> caps `at` 4) Just (makeReplacements caps <$> uaV3Rep)
+    mkRes caps =
+      UAResult
+        (repF caps (familyCap caps))
+        (repV1 caps)
+        (repV2 caps)
+        (repV3 caps)
+
+    repV1 caps = maybe (capture caps 2) Just (makeReplacements caps <$> uaV1Rep)
+    repV2 caps = maybe (capture caps 3) Just (makeReplacements caps <$> uaV2Rep)
+    repV3 caps = maybe (capture caps 4) Just (makeReplacements caps <$> uaV3Rep)
 
     repF caps x = maybe x (makeReplacements caps) uaFamRep
 
@@ -143,68 +116,25 @@ parseOS :: ByteString -> Maybe OSResult
 parseOS bs = msum $ map go osParsers
  where
   UAConfig {osParsers} = uaConfig
+  subject = decodeSubject bs
 
-  go OSParser {osRegex, osFamRep, osRep1, osRep2, osRep3, osRep4} =
-    either (const Nothing) mkRes
-      . mapM T.decodeUtf8'
-      =<< match osRegex bs []
+  go OSParser {osMatch, osFamRep, osRep1, osRep2, osRep3, osRep4} =
+    mkRes . NE.toList <$> osMatch subject
    where
-    mkRes caps@(_ : f : v1 : v2 : v3 : v4 : _) =
-      Just
-        $ OSResult
-          (repF caps f)
-          (repV1 caps (Just v1))
-          (repV2 caps (Just v2))
-          (repV3 caps (Just v3))
-          (repV4 caps (Just v4))
-    mkRes caps@[_, f, v1, v2, v3] =
-      Just
-        $ OSResult
-          (repF caps f)
-          (repV1 caps (Just v1))
-          (repV2 caps (Just v2))
-          (repV3 caps (Just v3))
-          (repV4 caps Nothing)
-    mkRes caps@[_, f, v1, v2] =
-      Just
-        $ OSResult
-          (repF caps f)
-          (repV1 caps (Just v1))
-          (repV2 caps (Just v2))
-          (repV3 caps Nothing)
-          (repV4 caps Nothing)
-    mkRes caps@[_, f, v1] =
-      Just
-        $ OSResult
-          (repF caps f)
-          (repV1 caps (Just v1))
-          (repV2 caps Nothing)
-          (repV3 caps Nothing)
-          (repV4 caps Nothing)
-    mkRes caps@[_, f] =
-      Just
-        $ OSResult
-          (repF caps f)
-          (repV1 caps Nothing)
-          (repV2 caps Nothing)
-          (repV3 caps Nothing)
-          (repV4 caps Nothing)
-    mkRes caps@[f] =
-      Just
-        $ OSResult
-          (repF caps f)
-          (repV1 caps Nothing)
-          (repV2 caps Nothing)
-          (repV3 caps Nothing)
-          (repV4 caps Nothing)
-    mkRes _ = Nothing
+    mkRes caps =
+      OSResult
+        (repF caps (familyCap caps))
+        (repV1 caps)
+        (repV2 caps)
+        (repV3 caps)
+        (repV4 caps)
 
     repF caps x = maybe x (makeReplacements caps) osFamRep
 
-    repV1 caps x = maybe (x <|> caps `at` 2) Just (makeReplacements caps <$> osRep1)
-    repV2 caps x = maybe (x <|> caps `at` 3) Just (makeReplacements caps <$> osRep2)
-    repV3 caps x = maybe (x <|> caps `at` 4) Just (makeReplacements caps <$> osRep3)
-    repV4 caps x = maybe (x <|> caps `at` 5) Just (makeReplacements caps <$> osRep4)
+    repV1 caps = maybe (capture caps 2) Just (makeReplacements caps <$> osRep1)
+    repV2 caps = maybe (capture caps 3) Just (makeReplacements caps <$> osRep2)
+    repV3 caps = maybe (capture caps 4) Just (makeReplacements caps <$> osRep3)
+    repV4 caps = maybe (capture caps 5) Just (makeReplacements caps <$> osRep4)
 
 -- | Result type for 'parseOS'
 data OSResult = OSResult
@@ -236,18 +166,13 @@ parseDev :: ByteString -> Maybe DevResult
 parseDev bs = msum $ map go devParsers
  where
   UAConfig {devParsers} = uaConfig
+  subject = decodeSubject bs
 
-  go DevParser {devRegex, devFamRep, devBrandRep, devModelRep} =
-    either (const Nothing) mkRes
-      . mapM T.decodeUtf8'
-      =<< match devRegex bs []
+  go DevParser {devMatch, devFamRep, devBrandRep, devModelRep} =
+    mkRes . NE.toList <$> devMatch subject
    where
-    mkRes caps@(_ : f : b : m : _) = Just $ mkDR (repF caps f) (repBrand caps (Just b)) (repModel caps (Just m))
-    mkRes caps@[_, f, b] = Just $ mkDR (repF caps f) (repBrand caps (Just b)) (repModel caps Nothing)
-    mkRes caps@[_, f] = Just $ mkDR (repF caps f) (repBrand caps Nothing) (repModel caps Nothing)
-    mkRes caps@[f] =
-      Just $ mkDR (repF caps f) (repBrand caps Nothing) (repModel caps Nothing)
-    mkRes _ = Nothing
+    mkRes caps =
+      mkDR (repF caps (familyCap caps)) (repBrand caps) (repModel caps)
 
     mkDR a b c = DevResult (T.strip a) (strip' =<< b) (strip' =<< c)
 
@@ -255,13 +180,16 @@ parseDev bs = msum $ map go devParsers
       "" -> Nothing
       t' -> Just t'
 
-    -- TODO: update other replacers to be like this if it works
-    -- TODO: some patterns don't capture so you should match on [f]
-    repBrand caps x = maybe x Just (makeReplacements caps <$> devBrandRep)
+    repBrand caps =
+      maybe (capture caps 2) Just (makeReplacements caps <$> devBrandRep)
     -- This technique is used in the python ua-parser. It isn't
     -- clear if there's a precedent in the spec but it clears up
     -- some remote edge cases (which may be test suite bugs TBH).
-    repModel caps x = maybe (x <|> caps `at` 1) Just (makeReplacements caps <$> devModelRep)
+    repModel caps =
+      maybe
+        (capture caps 3 <|> capture caps 1)
+        Just
+        (makeReplacements caps <$> devModelRep)
 
     repF caps x = maybe x (makeReplacements caps) devFamRep
 
@@ -303,43 +231,39 @@ data UAConfig = UAConfig
   , osParsers :: [OSParser]
   , devParsers :: [DevParser]
   }
-  deriving (Eq, Show)
 
 data UAParser = UAParser
-  { uaRegex :: Regex
+  { uaMatch :: Text -> Maybe (NonEmpty Text)
   , uaFamRep :: Maybe Text
   , uaV1Rep :: Maybe Text
   , uaV2Rep :: Maybe Text
   , uaV3Rep :: Maybe Text
   }
-  deriving (Eq, Show)
 
 data OSParser = OSParser
-  { osRegex :: Regex
+  { osMatch :: Text -> Maybe (NonEmpty Text)
   , osFamRep :: Maybe Text
   , osRep1 :: Maybe Text
   , osRep2 :: Maybe Text
   , osRep3 :: Maybe Text
   , osRep4 :: Maybe Text
   }
-  deriving (Eq, Show)
 
 data DevParser = DevParser
-  { devRegex :: Regex
+  { devMatch :: Text -> Maybe (NonEmpty Text)
   , devFamRep :: Maybe Text
   , devBrandRep :: Maybe Text
   , devModelRep :: Maybe Text
   }
-  deriving (Eq, Show)
 
-parseRegex :: Object -> Parser Regex
+parseRegex :: Object -> Parser (Text -> Maybe (NonEmpty Text))
 parseRegex v = do
   pat <- v .: "regex"
   flag <- v .:? "regex_flag" :: Parser (Maybe Text)
-  let flags = case flag of
-        Just "i" -> [caseless]
-        _ -> []
-  return (compile (T.encodeUtf8 pat) flags)
+  let opts = case flag of
+        Just "i" -> Caseless
+        _ -> mempty
+  return (capturesOpt opts pat)
 
 instance FromJSON UAConfig where
   parseJSON (Object v) =
@@ -378,7 +302,7 @@ instance FromJSON DevParser where
     modRep <- v .:? "model_replacement"
     return
       ( DevParser
-          { devRegex = r
+          { devMatch = r
           , devFamRep = fam
           , devBrandRep = brandRep
           , devModelRep = modRep
@@ -386,9 +310,19 @@ instance FromJSON DevParser where
       )
   parseJSON _ = error "Object expected when parsing JSON"
 
-at :: [a] -> Int -> Maybe a
-at [] _ = Nothing
-at (a : _) 0 = Just a
-at (_ : as) n
-  | n > 0 = at as (pred n)
-  | otherwise = Nothing
+decodeSubject :: ByteString -> Text
+decodeSubject = T.decodeUtf8With lenientDecode
+
+-- | A capture group by index (0 is the whole match). Groups that are absent,
+-- unset or empty are all 'Nothing'.
+capture :: [Text] -> Int -> Maybe Text
+capture caps n = case drop n caps of
+  t : _ | not (T.null t) -> Just t
+  _ -> Nothing
+
+-- | The first capture group, or the whole match when the pattern has none
+familyCap :: [Text] -> Text
+familyCap caps = case caps of
+  _ : f : _ -> f
+  whole : _ -> whole
+  [] -> ""

@@ -8,15 +8,13 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
           submodules: true
           fetch-depth: 0
-
-      - run: sudo apt-get install --assume-yes --no-install-recommends libpcre3-dev
 
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7

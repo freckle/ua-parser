@@ -53,7 +53,7 @@ dependencies:
   - data-default
   - deepseq
   - file-embed < 0.1
-  - pcre-light
+  - pcre2
   - text
   - yaml >= 0.8.3
 
