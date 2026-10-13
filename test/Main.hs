@@ -20,6 +20,8 @@ main = do
         [ "test_resources/firefox_user_agent_strings.yaml"
         , "test_resources/pgts_browser_list.yaml"
         , "tests/test_ua.yaml"
+        , "test_resources/opera_mini_user_agent_strings.yaml"
+        , "test_resources/podcasting_user_agent_strings.yaml"
         ]
   osCases <-
     mconcat
