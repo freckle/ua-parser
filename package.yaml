@@ -11,10 +11,6 @@ copyright: 2012 Ozgun Ataman, 2026 Renaissance Learning Inc
 license: BSD3
 github: freckle/ua-parser
 
-tested-with:
-  - GHC == 8.6.5
-  - GHC == 8.8.4
-
 extra-source-files:
   - README.md
   - changelog.md
@@ -32,12 +28,12 @@ flags:
     manual: true
     default: false
 
+language: GHC2021
+
 ghc-options: -Wall
 
 default-extensions:
   - DeriveAnyClass
-  - DeriveDataTypeable
-  - DeriveGeneric
   - NamedFieldPuns
   - NoImplicitPrelude
   - NoMonomorphismRestriction

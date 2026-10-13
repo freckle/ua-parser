@@ -3,9 +3,9 @@ module Main where
 import Prelude
 
 import Control.Applicative as A
-import qualified Data.ByteString.Char8 as B
+import Data.ByteString.Char8 qualified as B
 import Data.Monoid as M
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Test.Tasty
 import Test.Tasty.HUnit
 import Web.UAParser

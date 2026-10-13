@@ -10,11 +10,11 @@ import Prelude
 import Control.Applicative
 import Control.Monad (join)
 import Data.Aeson hiding ((.:?))
-import qualified Data.Aeson as A
+import Data.Aeson qualified as A
 import Data.ByteString (ByteString)
 import Data.String (fromString)
 import Data.Text (Text)
-import qualified Data.Text.Encoding as T
+import Data.Text.Encoding qualified as T
 import Data.Yaml hiding ((.:?))
 import System.FilePath
 

@@ -32,8 +32,8 @@ import Data.Monoid as M
 import Data.Serialize
 import Data.Serialize.Text ()
 import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
+import Data.Text qualified as T
+import Data.Text.Encoding qualified as T
 import Data.Yaml
 import GHC.Generics
 import Text.Regex.PCRE.Light
