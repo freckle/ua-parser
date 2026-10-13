@@ -52,6 +52,15 @@ library
       Web.UAParser
   hs-source-dirs:
       src
+  default-extensions:
+      DeriveAnyClass
+      DeriveDataTypeable
+      DeriveGeneric
+      NamedFieldPuns
+      NoImplicitPrelude
+      NoMonomorphismRestriction
+      OverloadedStrings
+      TemplateHaskell
   ghc-options: -Wall
   build-depends:
       aeson >=0.7
@@ -79,6 +88,15 @@ test-suite test
   hs-source-dirs:
       src
       test
+  default-extensions:
+      DeriveAnyClass
+      DeriveDataTypeable
+      DeriveGeneric
+      NamedFieldPuns
+      NoImplicitPrelude
+      NoMonomorphismRestriction
+      OverloadedStrings
+      TemplateHaskell
   ghc-options: -Wall -O2 -fwarn-tabs
   build-depends:
       HUnit
@@ -111,6 +129,15 @@ benchmark bench
   hs-source-dirs:
       bench
       src
+  default-extensions:
+      DeriveAnyClass
+      DeriveDataTypeable
+      DeriveGeneric
+      NamedFieldPuns
+      NoImplicitPrelude
+      NoMonomorphismRestriction
+      OverloadedStrings
+      TemplateHaskell
   ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson >=0.7
