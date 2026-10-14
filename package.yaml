@@ -22,12 +22,6 @@ data-files:
   - deps/uap-core/test_resources/*.yaml
   - deps/uap-core/tests/*.yaml
 
-flags:
-  lib-Werror:
-    description: Build with -Werror
-    manual: true
-    default: false
-
 language: GHC2021
 
 ghc-options: -Wall
@@ -39,10 +33,6 @@ default-extensions:
   - NoMonomorphismRestriction
   - OverloadedStrings
   - TemplateHaskell
-
-when:
-  - condition: flag(lib-Werror)
-    ghc-options: -Werror
 
 dependencies:
   - base < 5
